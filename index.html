@@ -1,0 +1,134 @@
+<html>
+    <head>
+     <title>とうもろこし</title>       
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            textarea {
+                width: 100%;
+                max-width: 100%;
+            }
+        </style>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    </head>
+    <body>
+        <div style="margin-bottom: 15px;">
+            <textarea rows="15" cols="200" id="input"></textarea>
+        </div>
+        <button id="update" type="button">Generate</button>
+        <div style="margin-top: 15px;">
+            <textarea rows="15" cols="200" id="output"></textarea>
+        </div>
+        <script>
+            function formatString(str) {
+                str = str.toLowerCase();
+                str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, "a");
+                str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, "e");
+                str = str.replace(/ì|í|ị|ỉ|ĩ/g, "i");
+                str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, "o");
+                str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g, "u");
+                str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g, "y");
+                str = str.replace(/đ/g, "d");
+                return str;
+                }
+            $(document).ready(function(){
+                $('#update').click(function(){
+                    var words = formatString($('#input').val().trim().replace(/\s\s+/g, ' ').replaceAll('....','.').replaceAll('...','.').replaceAll('..','.')).replaceAll('+',' ');
+                    // 18k. -> 18. 
+                    words = words.replace(/(\d+k\.)/g, (_, str) => {
+                        return ' ' + str.replace('k.','. ')
+                    }); 
+
+                    //  18k -> 18.
+                    words = words.replace(/(\d+k)/g, (_, str) => {
+                        return ' ' + str.replace('k','. ')
+                    }); 
+                    // 20.n -> 20n 
+                    words = words.replace(/(\d+\.n)/g, (_, str) => {
+                        let result = str.split('.');
+                        return result[0] + result[1];
+                    }); 
+
+                    // db.10 -> db 10.
+                    words = words.replace(/(db\.\d+)/g, (_, str) => {
+                        let result = str.split('.');
+                        return result[0] + ' ' + result[1] + '.';
+                    });
+
+                    // db10 -> db 10.
+                    words = words.replace(/(db\d+)/g, (_, str) => {
+                        let result = str.split('db');
+                        return 'db' + ' ' + result[1] + '.';
+                    });
+
+                    // 10db -> 10 db
+                    words = words.replace(/(\d+db)/g, (_, str) => {
+                        let result = str.split('db');
+                        return result[0] + ' db'; 
+                    });
+
+                    // db 10 20k -> 10 db 20.
+                    words = words.replace(/(db\s{1,}\d{1,}\s{1,}\d+k)/g, (_, str) => {
+                        let result = str.trim().replaceAll('    ',' ').replaceAll('   ',' ').replaceAll('  ',' ').split(' ');
+                        return result[1] + ' ' + result[0] + ' ' + result[2].replace('k','.');
+                    });
+
+                    // words = words.replace(/(\d+k)/g, (_, str) => {
+                    //     let result = str.split('k');
+                    //     return result[0] + '.'; 
+                    // });
+                    words = words.replaceAll('   ',' ').replaceAll('  ',' ');
+                    
+                    words = words.split(' ');
+                    var data = [];
+                    result = '';
+                    for (let j = 0; j < words.length; j++) {
+                        var reg = /^\d+$/;
+                        if ( reg.test(words[j]) && reg.test(words[j+1]) || reg.test(words[j]) && reg.test(words[j-1]) ) {
+                            data[j] = 2;
+                        } else {
+                            data[j] = 1;
+                        }
+                    }
+                    
+                    var tmpData = [];
+                    for (let j = 0; j < words.length; j++) {
+                        let arr = words[j].split('.').filter(n => n);
+                        if (arr.length >= 2) {
+                            tmpData.push(...arr);
+                        } else {
+                            tmpData.push(words[j])
+                        }
+                    }
+                    for (let j = 0; j < tmpData.length; j++) {
+                        var reg = /^\d+$/;
+                        if ( reg.test(tmpData[j]) && reg.test(tmpData[j+1]) || reg.test(tmpData[j]) && reg.test(tmpData[j-1]) ) {
+                            data[j] = 2;
+                        } else {
+                            data[j] = 1;
+                        }
+                    }
+
+
+                    for (let j = 0; j < tmpData.length; j++) {
+                        if (data[j] == 2 && data[j+1] == 2) {
+                            result += tmpData[j] + ',';
+                        } else {
+                            let reg2 = /\dn/;
+                            if (reg2.test(tmpData[j])) {
+                                result += tmpData[j].replaceAll('n', '.') + ' ';
+                            } else {
+                                result += tmpData[j] + ' ';
+                            }
+                        }      
+                    }
+                    result = result.replace(/(db\s*g1\s*(?:\d+,)+\d+\s*\d+\.)/g, (_, str) => {
+                        let a = str.trim().split(' ');
+                        return a[2] + ' ' + a[0] + ' ' + a[1] + ' ' + a[3];
+                    });
+                    result = result.replaceAll('n','.');
+                    $('#output').val(result);
+                })
+            })
+        </script>
+    </body>
+</html>
